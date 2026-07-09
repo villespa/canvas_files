@@ -42,6 +42,29 @@ def sync_courses(course_list, location, console):
                     console.print(f" [bold red]failed: {e}[/bold red]")
 
 
+def unlock_token(config):
+    console.print("Enter your password to decrypt the token")
+    passw = console.input("[bold blue]> [/bold blue]", password=True)
+    key = base64.urlsafe_b64encode(hashlib.sha256(passw.encode()).digest())
+    cipher = Fernet(key)
+    try:
+        return cipher.decrypt(config["token"].encode()).decode()
+    except InvalidToken:
+        console.print("[bold red]Wrong password[/bold red]")
+        sys.exit()
+
+
+def connect(url, token):
+    canvas = Canvas(url, token)
+    try:
+        user = Canvas.get_current_user(canvas)
+        console.print(f"[bold green]Connected as {user.name}[/bold green]")
+    except Exception as e:
+        console.print(f"[bold red]Connection failed: {e}[/bold red]")
+        sys.exit()
+    return canvas
+
+
 def handle_exception(exc_type, exc_value, exc_traceback):
     if issubclass(exc_type, KeyboardInterrupt):
         console.print("\n[bold yellow]Cancelled by user.[/bold yellow]")
@@ -75,24 +98,8 @@ if confirm == "2":
     location = config["location"]
     canvas_url = config["url"]
 
-    console.print("Enter your password to decrypt the token")
-    passw = console.input("[bold blue]> [/bold blue]", password=True)
-    key = base64.urlsafe_b64encode(hashlib.sha256(passw.encode()).digest())
-    cipher = Fernet(key)
-    try:
-        token = cipher.decrypt(config["token"].encode()).decode()
-    except InvalidToken:
-        console.print("[bold red]Wrong password[/bold red]")
-        sys.exit()
-
-    canvas = Canvas(canvas_url, token)
-
-    try:
-        user = Canvas.get_current_user(canvas)
-        console.print(f"[bold green]Connected as {user.name}[/bold green]")
-    except Exception as e:
-        console.print(f"[bold red]Connection failed: {e}[/bold red]")
-        sys.exit()
+    token = unlock_token(config)
+    canvas = connect(canvas_url, token)
 
     course_list = []
     for cid in config["included_course_ids"]:
@@ -146,25 +153,9 @@ if (reconfigure=="y") or (config == {}):
 else:
     location = config["location"]
     canvas_url = config["url"]
+    token = unlock_token(config)
 
-    console.print("Enter your password to decrypt the token")
-    passw = console.input("[bold blue]> [/bold blue]", password=True)
-    key = base64.urlsafe_b64encode(hashlib.sha256(passw.encode()).digest())
-    cipher = Fernet(key)
-    try:
-        token = cipher.decrypt(config["token"].encode()).decode()
-    except InvalidToken:
-        console.print("[bold red]Wrong password[/bold red]")
-        sys.exit()
-
-canvas = Canvas(canvas_url, token)
-
-try:
-    user = Canvas.get_current_user(canvas)
-    console.print(f"[bold green]Connected as {user.name}[/bold green]")
-except Exception as e:
-    console.print(f"[bold red]Connection failed: {e}[/bold red]")
-    sys.exit()
+canvas = connect(canvas_url, token)
 
 courses = Canvas.get_courses(canvas)
 course_list = list(courses)
