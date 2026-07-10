@@ -5,13 +5,29 @@ import os
 import json
 from rich.console import Console
 import sys
-
+import unidecode
 
 def print_courses(courses: list, console: Console):
     for i, course in enumerate(courses):
         console.rule("", align='left')
         console.print(f"[bold cyan]{i+1}] [/bold cyan] {course}")
 
+def limpiar(parte: str) -> str:
+    parte = unidecode.unidecode(parte)
+    prohibidos = '<>:"/\\|?* '
+    nuevo = ""
+    for letra in parte:
+        if letra in prohibidos:
+            if nuevo != "" and nuevo[-1] == "_":
+                pass
+            else:
+                nuevo = nuevo + "_"
+        else:
+            nuevo = nuevo + letra
+    nuevo = nuevo.rstrip(". ")
+    if nuevo == "":
+        nuevo = "_unnamed"
+    return nuevo
 
 def sync_courses(course_list, location, console):
     for course in course_list:
@@ -19,8 +35,10 @@ def sync_courses(course_list, location, console):
         for folder in course.get_folders():
             if folder.full_name == "course files/_setup":
                 continue
-            course_path = os.path.join(location, course.name)
-            folder_path = os.path.join(course_path, folder.full_name)
+            course_name = limpiar(course.name)
+            course_path = os.path.join(location, course_name)
+            partes = [limpiar(parte) for parte in folder.full_name.split("/")]
+            folder_path = os.path.join(course_path, *partes)    
             os.makedirs(folder_path, exist_ok=True)
             try:
                 files = list(folder.get_files())
@@ -33,7 +51,7 @@ def sync_courses(course_list, location, console):
             for file in files:
                 if str(file.display_name).startswith("_"):
                     continue
-                file_path = os.path.join(folder_path, file.display_name)
+                file_path = os.path.join(folder_path, limpiar(file.display_name))
                 console.print(f"    Downloading {file.display_name}...", end="")
                 try:
                     file.download(file_path)
