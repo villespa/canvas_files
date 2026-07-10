@@ -13,7 +13,3 @@ pip install canvasapi cryptography rich
 ```
 python main.py
 ```
-
-Apretá **[1]** la primera vez para configurar (carpeta, URL de Canvas, token, contraseña) y elegir qué cursos sincronizar.
-
-Apretá **[2]** las próximas veces para sincronizar rápido los mismos cursos.
